@@ -1,0 +1,48 @@
+# Here you can define all your datasets by using simple YAML syntax.
+#
+# Documentation for this file format can be found in "The Data Catalog"
+# Link: https://docs.kedro.org/en/stable/catalog-data/introduction/#data-catalog
+
+raw_tonal_data:
+  type: pandas.CSVDataset
+  filepath: data/01_raw/tonal_exams.csv
+  load_args:
+    sep: ";"
+
+clean_tonal_data:
+  type: pandas.CSVDataset
+  filepath: data/02_intermediate/clean_tonal_data.csv
+
+invalid_rows:
+  type: pandas.CSVDataset
+  filepath: data/02_intermediate/invalid_rows.csv
+
+X_train:
+  type: pandas.CSVDataset
+  filepath: data/03_primary/X_train.csv
+
+X_test:
+  type: pandas.CSVDataset
+  filepath: data/03_primary/X_test.csv
+
+y_train:
+  type: pandas.CSVDataset
+  filepath: data/03_primary/y_train.csv
+
+y_test:
+  type: pandas.CSVDataset
+  filepath: data/03_primary/y_test.csv
+
+trained_model:
+  type: pickle.PickleDataset
+  filepath: data/06_models/trained_model.pkl
+
+model_metrics:
+  type: json.JSONDataset
+  filepath: data/08_reporting/model_metrics.json
+
+inference_input:
+  type: pandas.MemoryDataset
+
+inference_predictions:
+  type: pandas.MemoryDataset
