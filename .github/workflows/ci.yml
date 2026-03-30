@@ -1,18 +1,73 @@
+# ==============================================
+# CI/CD — PrediGain (Version Finale Optimisée)
+# ==============================================
+
+name: CI/CD PrediGain
+
+on:
+  push:
+    branches: [main, secondary]
+  pull_request:
+    branches: [main]
+
+# Force l'utilisation de Node 24 pour supprimer les warnings de dépréciation
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  PYTHONPATH: .
 
 jobs:
+  # ============================================
+  # JOB 1 : Tests (Pytest + Coverage)
+  # ============================================
   tests:
+    name: Tests unitaires et API
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Installer
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Installer les dépendances
         run: |
-          pip install -r requirements.txt pytest pytest-cov
-          pip install -e .
+          python -m pip install --upgrade pip
+          pip install --prefer-binary -r requirements.txt
+          pip install pytest pytest-cov
+
+      - name: Installer le projet en mode dev
+        run: pip install -e .
+
       - name: Lancer les tests
-        # Le PYTHONPATH=. permet à pytest de trouver "app.py" et "gain_project"
-        run: PYTHONPATH=. pytest tests/ -v
+        # On utilise "|| true" temporairement si tu veux que le pipeline continue 
+        # même si un test échoue, mais il vaut mieux laisser l'erreur pour bloquer le merge.
+        run: pytest tests/ -v --tb=short --cov=gain_project --cov-report=term-missing
+
+  # ============================================
+  # JOB 2 : Docker Build
+  # ============================================
+  docker:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    needs: tests # Ne se lance que si les tests passent
+
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      - name: Build de l'image Docker
+        run: docker build -t gain-project:latest .
+
+      - name: Vérifier l'image
+        run: docker images gain-project:latest
