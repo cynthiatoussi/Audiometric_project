@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PrediGain Audiométrie</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        [data-theme="dark"]{--bg:#0d1117;--bg-card:#161b22;--bg-input:#21262d;--bg-sidebar:#0a1628;--border:#30363d;--text:#e6edf3;--text-sec:#8b949e;--chart-bg:#161b22;--chart-grid:#21262d;--chart-text:#8b949e;--val-bg:#1a1a2e;--val-border:#4a4a7c;--val-color:#fff}
+        [data-theme="light"]{--bg:#f0f2f5;--bg-card:#fff;--bg-input:#f5f7fa;--bg-sidebar:#1e3a5f;--border:#d0d7de;--text:#1a2b3c;--text-sec:#57606a;--chart-bg:#fff;--chart-grid:#e8edf2;--chart-text:#57606a;--val-bg:#fff;--val-border:#a0a8b4;--val-color:#1a2b3c}
+        :root{--accent:#00d4aa;--accent2:#00b4d8;--pink:#e74c6f;--success:#2ea043;--warning:#d29922;--radius:10px}
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh}
+
+        .sidebar{width:170px;background:var(--bg-sidebar);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:20}
+        .sidebar-logo{padding:1rem .75rem;border-bottom:1px solid rgba(255,255,255,.1);display:flex;align-items:center;gap:.5rem}
+        .sidebar-logo svg{width:30px;height:30px}
+        .logo-text{font-size:.95rem;font-weight:800;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+        .logo-sub{display:block;font-size:.5rem;color:rgba(255,255,255,.5);letter-spacing:.08em;-webkit-text-fill-color:rgba(255,255,255,.5)}
+        .sidebar-nav{flex:1;padding:.4rem 0}
+        .nav-item{display:flex;align-items:center;gap:.5rem;padding:.55rem 1rem;color:rgba(255,255,255,.55);font-size:.75rem;font-weight:500;cursor:pointer;border-left:3px solid transparent}
+        .nav-item.active{color:var(--accent);background:rgba(0,212,170,.1);border-left-color:var(--accent)}
+        .sidebar-footer{padding:.4rem 0;border-top:1px solid rgba(255,255,255,.1)}
+        .api-box{margin:.4rem .75rem;padding:.35rem .5rem;background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.1);border-radius:6px;display:flex;align-items:center;gap:.35rem;font-size:.6rem;color:rgba(255,255,255,.6)}
+        .api-dot{width:6px;height:6px;border-radius:50%;background:#666}
+        .api-dot.on{background:var(--success);box-shadow:0 0 5px rgba(46,160,67,.5)}
+
+        .main{margin-left:170px;flex:1;padding:.75rem 1rem}
+        .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem;flex-wrap:wrap;gap:.4rem}
+        .hbtn{padding:.35rem .6rem;background:var(--bg-card);border:1px solid var(--border);border-radius:5px;color:var(--text-sec);font-family:'Inter';font-size:.65rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:.25rem}
+        .hbtn:hover{border-color:var(--accent);color:var(--accent)}
+        .hbtn.loaded{border-color:var(--success);color:var(--success)}
+        .pnav{display:flex;align-items:center;gap:.25rem}
+        .pbtn{width:24px;height:24px;border:1px solid var(--border);border-radius:4px;background:var(--bg-card);color:var(--text-sec);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.7rem}
+        .pbtn:hover{border-color:var(--accent);color:var(--accent)}
+        .plbl{font-size:.65rem;color:var(--text-sec);min-width:70px;text-align:center}
+        .tbtn{width:24px;height:24px;border:1px solid var(--border);border-radius:4px;background:var(--bg-card);color:var(--text-sec);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.8rem}
+
+        .modules{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:.6rem}
+        .mod{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem}
+        .mod-title{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:.5rem;display:flex;align-items:center;gap:.35rem}
+        .mic{width:20px;height:20px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:.65rem}
+        .mic.t{background:rgba(0,212,170,.15);color:var(--accent)}.mic.v{background:rgba(0,180,216,.15);color:var(--accent2)}
+        .mod-body{display:grid;grid-template-columns:250px 1fr;gap:.5rem}
+
+        .slds{display:flex;flex-direction:column;gap:.3rem}
+        .sr{display:flex;align-items:center;gap:.3rem}
+        .sl{font-size:.72rem;font-weight:700;color:var(--text);width:50px;flex-shrink:0;font-family:'JetBrains Mono',monospace}
+        .sr input[type=range]{width:100px;flex-shrink:0;height:3px;-webkit-appearance:none;appearance:none;background:var(--border);border-radius:2px;outline:none;cursor:pointer}
+        .sr input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;cursor:pointer;border:2px solid var(--bg-card)}
+        .tsr input[type=range]::-webkit-slider-thumb{background:var(--accent)}
+        .vsr input[type=range]::-webkit-slider-thumb{background:var(--accent2)}
+        .sval{width:52px;flex-shrink:0;text-align:center;font-size:.9rem;font-family:'JetBrains Mono',monospace;font-weight:700;background:var(--val-bg);border:2px solid var(--val-border);border-radius:5px;padding:.3rem .1rem;color:var(--val-color);outline:none}
+        .sval:focus{border-color:var(--accent)}
+        .su{font-size:.6rem;color:var(--text-sec)}
+
+        .cleg{display:flex;gap:.6rem;justify-content:flex-end;margin-bottom:.2rem;font-size:.6rem;color:var(--text-sec)}
+
+        .pred{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;text-align:center}
+        .pred-btn{width:100%;padding:.65rem;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#0d1117;border:none;border-radius:7px;font-family:'Inter';font-size:.8rem;font-weight:700;text-transform:uppercase;cursor:pointer;margin-bottom:.6rem}
+        .pred-btn:hover{transform:translateY(-1px);box-shadow:0 3px 12px rgba(0,212,170,.3)}
+        .stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.6rem}
+        .st{background:var(--bg-input);border:1px solid var(--border);border-radius:7px;padding:.6rem}
+        .stv{font-size:1.3rem;font-weight:800}.stv.tc{color:var(--accent)}.stv.vc{color:var(--accent2)}.stv.gc{color:var(--pink)}
+        .stl{font-size:.58rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-sec)}
+        .prg{width:100%;height:4px;background:var(--border);border-radius:2px;margin-top:.3rem;overflow:hidden}
+        .pf{height:100%;border-radius:2px;transition:width .5s;background:linear-gradient(90deg,var(--accent),var(--pink))}
+
+        .batch{display:none;margin-top:.5rem;padding:.5rem;background:var(--bg-input);border:1px solid var(--border);border-radius:6px;text-align:left;font-size:.7rem;color:var(--text-sec)}
+        .batch.show{display:block}.batch strong{color:var(--text)}
+
+        .inv{display:none;margin-top:.5rem;text-align:left}
+        .inv.show{display:block}
+        .inv-title{font-size:.72rem;font-weight:700;color:var(--warning);margin-bottom:.3rem}
+        .inv-list{max-height:180px;overflow-y:auto;background:var(--bg-input);border:1px solid var(--border);border-radius:5px;padding:.4rem}
+        .inv-row{padding:.25rem .4rem;border-bottom:1px solid var(--border);font-size:.65rem;font-family:'JetBrains Mono',monospace}
+        .inv-row:last-child{border-bottom:none}
+        .inv-idx{color:var(--pink);font-weight:700}.inv-iss{color:var(--text-sec)}
+
+        .msg{padding:.35rem .6rem;border-radius:5px;font-size:.65rem;margin-top:.4rem;display:none;text-align:center}
+        .msg.err{background:rgba(231,76,111,.1);border:1px solid rgba(231,76,111,.3);color:var(--pink);display:block}
+        .msg.ok{background:rgba(46,160,67,.1);border:1px solid rgba(46,160,67,.3);color:var(--success);display:block}
+    </style>
+</head>
+<body>
+<nav class="sidebar">
+    <div class="sidebar-logo">
+        <svg viewBox="0 0 36 36" fill="none"><circle cx="18" cy="18" r="16" stroke="url(#lg)" stroke-width="2"/><path d="M12 18c0-5 2.5-10 6-10s6 5 6 10-2.5 10-6 10-6-5-6-10z" stroke="url(#lg)" stroke-width="1.5" fill="none"/><circle cx="18" cy="18" r="2.5" fill="url(#lg)"/><defs><linearGradient id="lg" x1="0" y1="0" x2="36" y2="36"><stop stop-color="var(--accent)"/><stop offset="1" stop-color="var(--accent2)"/></linearGradient></defs></svg>
+        <div><span class="logo-text">PrediGain</span><span class="logo-sub">Audiométrie</span></div>
+    </div>
+    <div class="sidebar-nav">
+        <div class="nav-item"><span>👤</span> Patients</div>
+        <div class="nav-item active"><span>📊</span> Analyse</div>
+        <div class="nav-item"><span>📋</span> Rapports</div>
+        <div class="nav-item"><span>⚙️</span> Config</div>
+    </div>
+    <div class="sidebar-footer">
+        <div class="api-box"><div class="api-dot" id="ad"></div><span id="at">...</span></div>
+    </div>
+</nav>
+
+<div class="main">
+    <div class="header">
+        <div style="display:flex;gap:.4rem">
+            <button class="hbtn" id="btnT" onclick="document.getElementById('fT').click()">📊 CSV Tonal</button>
+            <button class="hbtn" id="clrT" style="display:none;color:var(--pink)" onclick="clearCSV('tonal')">✕</button>
+            <input type="file" id="fT" accept=".csv" style="display:none" onchange="loadFile('tonal',event)">
+            <button class="hbtn" id="btnV" onclick="document.getElementById('fV').click()">🗣️ CSV Vocal</button>
+            <button class="hbtn" id="clrV" style="display:none;color:var(--pink)" onclick="clearCSV('vocal')">✕</button>
+            <input type="file" id="fV" accept=".csv" style="display:none" onchange="loadFile('vocal',event)">
+        </div>
+        <div style="display:flex;align-items:center;gap:.4rem">
+            <div class="pnav">
+                <button class="pbtn" onclick="prevP()">◀</button>
+                <span class="plbl" id="pl">1/1</span>
+                <button class="pbtn" onclick="nextP()">▶</button>
+            </div>
+            <button class="tbtn" onclick="toggleTheme()" id="tb">🌙</button>
+        </div>
+    </div>
+
+    <div class="modules">
+        <div class="mod">
+            <div class="mod-title"><div class="mic t">🔊</div> Audiométrie Tonale (dB HL)</div>
+            <div class="mod-body">
+                <div class="slds" id="tSliders"></div>
+                <div>
+                    <div class="cleg"><span style="color:var(--accent)">━</span> Before &nbsp;<span style="color:var(--pink)">┅</span> After</div>
+                    <div id="tChart" style="height:220px"></div>
+                </div>
+            </div>
+        </div>
+        <div class="mod">
+            <div class="mod-title"><div class="mic v">🗣️</div> Audiométrie Vocale (%)</div>
+            <div class="mod-body">
+                <div class="slds" id="vSliders"></div>
+                <div>
+                    <div class="cleg"><span style="color:var(--accent2)">━</span> Before &nbsp;<span style="color:var(--pink)">┅</span> After</div>
+                    <div id="vChart" style="height:220px"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="pred">
+        <button class="pred-btn" onclick="predict()">Calculer la Prédiction</button>
+        <div class="stats">
+            <div class="st"><div class="stv tc" id="s1">—</div><div class="stl">Gain Tonal Moyen</div></div>
+            <div class="st"><div class="stv vc" id="s2">—</div><div class="stl">Gain Vocal Moyen</div></div>
+            <div class="st"><div class="stv gc" id="s3">—</div><div class="stl">Score Global</div><div class="prg"><div class="pf" id="pf" style="width:0"></div></div></div>
+        </div>
+        <div class="batch" id="batchInfo"></div>
+        <div class="inv" id="invSec">
+            <div class="inv-title">⚠️ Lignes invalides détectées</div>
+            <div class="inv-list" id="invList"></div>
+        </div>
+        <div id="msg" class="msg"></div>
+    </div>
+</div>
+
+<script>
+var API = window.location.origin;
+var TF = [125,250,500,1000,2000,4000,8000];
+var TL = ['125','250','500','1K','2K','4K','8K'];
+var VI = [30,40,50,60,70,80,90];
+
+var loaded = { tonal: null, vocal: null };
+var results = { tonal: null, vocal: null };
+var curP = 0, isDark = true;
+
+// === THEME ===
+function toggleTheme() {
+    isDark = !isDark;
+    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+    document.getElementById('tb').textContent = isDark ? '🌙' : '☀️';
+    initCharts();
+}
+function gc() {
+    var s = getComputedStyle(document.documentElement);
+    return { bg: s.getPropertyValue('--chart-bg').trim(), grid: s.getPropertyValue('--chart-grid').trim(), text: s.getPropertyValue('--chart-text').trim() };
+}
+
+// === SLIDERS ===
+function buildSliders() {
+    var td = document.getElementById('tSliders');
+    TF.forEach(function(f) {
+        var l = f >= 1000 ? (f/1000)+'kHz' : f+'Hz';
+        td.innerHTML += '<div class="sr tsr"><span class="sl">' + l + '</span><input type="range" min="-10" max="120" value="40" id="ts' + f + '" oninput="sSync(\'t\',' + f + ')"><input type="number" class="sval" value="40" id="tv' + f + '" oninput="vSync(\'t\',' + f + ')"></div>';
+    });
+    var vd = document.getElementById('vSliders');
+    VI.forEach(function(i) {
+        vd.innerHTML += '<div class="sr vsr"><span class="sl">' + i + 'dB</span><input type="range" min="0" max="100" value="50" id="vs' + i + '" oninput="sSync(\'v\',' + i + ')"><input type="number" class="sval" value="50" id="vv' + i + '" oninput="vSync(\'v\',' + i + ')"><span class="su">%</span></div>';
+    });
+}
+function sSync(t, k) { document.getElementById(t+'v'+k).value = document.getElementById(t+'s'+k).value; uc(t); }
+function vSync(t, k) { document.getElementById(t+'s'+k).value = document.getElementById(t+'v'+k).value; uc(t); }
+function getT() { return TF.map(function(f) { return parseFloat(document.getElementById('tv'+f).value); }); }
+function getV() { return VI.map(function(i) { return parseFloat(document.getElementById('vv'+i).value); }); }
+function setT(v) { TF.forEach(function(f,i) { document.getElementById('ts'+f).value = v[i]; document.getElementById('tv'+f).value = v[i]; }); uc('t'); }
+function setV(v) { VI.forEach(function(d,i) { document.getElementById('vs'+d).value = v[i]; document.getElementById('vv'+d).value = v[i]; }); uc('v'); }
+
+// === CHARTS ===
+function initCharts() {
+    var c = gc(), m = {t:5, b:30, l:35, r:5};
+    Plotly.newPlot('tChart', [], {paper_bgcolor:c.bg, plot_bgcolor:c.bg, font:{color:c.text, family:'Inter', size:9}, xaxis:{title:'Fréquence (Hz)', tickvals:TF, ticktext:TL, type:'log', gridcolor:c.grid, linecolor:c.grid, zeroline:false}, yaxis:{title:'dB HL', autorange:'reversed', range:[-10,120], gridcolor:c.grid, linecolor:c.grid, dtick:20, zeroline:false}, margin:m, showlegend:false}, {responsive:true, displayModeBar:false});
+    Plotly.newPlot('vChart', [], {paper_bgcolor:c.bg, plot_bgcolor:c.bg, font:{color:c.text, family:'Inter', size:9}, xaxis:{title:'Intensité (dB)', tickvals:VI, gridcolor:c.grid, linecolor:c.grid, zeroline:false}, yaxis:{title:'%', range:[0,105], gridcolor:c.grid, linecolor:c.grid, dtick:20, zeroline:false}, margin:m, showlegend:false}, {responsive:true, displayModeBar:false});
+    uc('t'); uc('v');
+}
+function uc(t) {
+    var c = gc();
+    if (t === 't') Plotly.react('tChart', [{x:TF, y:getT(), mode:'lines+markers', line:{color:'#00d4aa', width:2.5}, marker:{size:5, color:'#00d4aa'}}], Object.assign({}, document.getElementById('tChart').layout, {paper_bgcolor:c.bg, plot_bgcolor:c.bg}));
+    else Plotly.react('vChart', [{x:VI, y:getV(), mode:'lines+markers', line:{color:'#00b4d8', width:2.5, shape:'spline'}, marker:{size:5, color:'#00b4d8'}}], Object.assign({}, document.getElementById('vChart').layout, {paper_bgcolor:c.bg, plot_bgcolor:c.bg}));
+}
+function plotT(b, a) {
+    var c = gc();
+    Plotly.react('tChart', [{x:TF, y:b, mode:'lines+markers', line:{color:'#00d4aa', width:2.5}, marker:{size:5}}, {x:TF, y:a, mode:'lines+markers', line:{color:'#e74c6f', width:2.5, dash:'dot'}, marker:{size:5, symbol:'diamond', color:'#e74c6f'}}], Object.assign({}, document.getElementById('tChart').layout, {paper_bgcolor:c.bg, plot_bgcolor:c.bg}));
+}
+function plotV(b, a) {
+    var c = gc();
+    Plotly.react('vChart', [{x:VI, y:b, mode:'lines+markers', line:{color:'#00b4d8', width:2.5, shape:'spline'}, marker:{size:5}}, {x:VI, y:a, mode:'lines+markers', line:{color:'#e74c6f', width:2.5, dash:'dot', shape:'spline'}, marker:{size:5, symbol:'diamond', color:'#e74c6f'}}], Object.assign({}, document.getElementById('vChart').layout, {paper_bgcolor:c.bg, plot_bgcolor:c.bg}));
+}
+
+// === LOAD CSV (just parse, don't predict yet) ===
+function loadFile(type, event) {
+    var file = event.target.files[0];
+    if (!file) return;
+    event.target.value = '';
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        var lines = e.target.result.trim().split('\n');
+        var headers = lines[0].split(',').map(function(h) { return h.trim(); });
+        var rows = [];
+        for (var i = 1; i < lines.length; i++) {
+            var vals = lines[i].split(',');
+            if (vals.length < headers.length) continue;
+            var row = {};
+            headers.forEach(function(h, idx) {
+                var v = vals[idx].trim();
+                row[h] = v === '' ? null : (isNaN(v) ? v : parseFloat(v));
+            });
+            rows.push(row);
+        }
+        loaded[type] = { rows: rows, name: file.name };
+        var btn = document.getElementById(type === 'tonal' ? 'btnT' : 'btnV');
+        btn.textContent = (type === 'tonal' ? '📊 ' : '🗣️ ') + file.name + ' (' + rows.length + ')';
+        btn.classList.add('loaded');
+        document.getElementById(type === 'tonal' ? 'clrT' : 'clrV').style.display = 'flex';
+
+        // Fill sliders with first row
+        if (type === 'tonal' && rows.length > 0) {
+            var vals = TF.map(function(f) { return parseFloat(rows[0]['before_exam_'+f+'_Hz']) || 0; });
+            setT(vals);
+        }
+        if (type === 'vocal' && rows.length > 0) {
+            var vals = VI.map(function(i) { return parseFloat(rows[0]['wrs_'+i+'_before']) || 0; });
+            setV(vals);
+        }
+        sm('Fichier ' + type + ' chargé : ' + rows.length + ' lignes. Cliquez sur Calculer.', 'ok');
+    };
+    reader.readAsText(file);
+}
+
+// === CLEAR CSV ===
+function clearCSV(type) {
+    loaded[type] = null;
+    results[type] = null;
+    var btn = document.getElementById(type === 'tonal' ? 'btnT' : 'btnV');
+    btn.textContent = type === 'tonal' ? '📊 CSV Tonal' : '🗣️ CSV Vocal';
+    btn.classList.remove('loaded');
+    document.getElementById(type === 'tonal' ? 'clrT' : 'clrV').style.display = 'none';
+    if (type === 'tonal') { setT([40,40,40,40,40,40,40]); }
+    else { setV([50,50,50,50,50,50,50]); }
+    hide();
+    sm('CSV ' + type + ' supprimé', 'ok');
+}
+
+// === PREDICT (main button) ===
+async function predict() {
+    sm(''); hide();
+    var hasCsvT = loaded.tonal && loaded.tonal.rows.length > 0;
+    var hasCsvV = loaded.vocal && loaded.vocal.rows.length > 0;
+    var batchHtml = '';
+    var allInvalid = [];
+
+    // --- TONAL ---
+    var tRows = hasCsvT ? loaded.tonal.rows : [buildTonalRow()];
+    try {
+        var tResp = await fetch(API + '/predict/tonal', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(tRows) });
+        var tData = await tResp.json();
+        if (tData.error) { sm(tData.error, 'err'); return; }
+        results.tonal = tData;
+        if (hasCsvT) batchHtml += '<strong>TONAL (' + loaded.tonal.name + ')</strong> : ' + tData.n_total + ' lignes → <strong style="color:var(--success)">' + tData.n_predicted + ' prédites</strong>, <strong style="color:var(--pink)">' + tData.n_invalid + ' invalides</strong><br>';
+        if (tData.invalid_rows) tData.invalid_rows.forEach(function(r) { r.issues.forEach(function(iss) { allInvalid.push('[TONAL] Ligne ' + r.row_index + ' → ' + iss); }); });
+    } catch(e) { sm('Erreur connexion tonal', 'err'); return; }
+
+    // --- VOCAL ---
+    var vRows = hasCsvV ? loaded.vocal.rows : [buildVocalRow()];
+    try {
+        var vResp = await fetch(API + '/predict/vocal', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(vRows) });
+        var vData = await vResp.json();
+        if (vData.error) { sm(vData.error, 'err'); return; }
+        results.vocal = vData;
+        if (hasCsvV) batchHtml += '<strong>VOCAL (' + loaded.vocal.name + ')</strong> : ' + vData.n_total + ' lignes → <strong style="color:var(--success)">' + vData.n_predicted + ' prédites</strong>, <strong style="color:var(--pink)">' + vData.n_invalid + ' invalides</strong>';
+        if (vData.invalid_rows) vData.invalid_rows.forEach(function(r) { r.issues.forEach(function(iss) { allInvalid.push('[VOCAL] Ligne ' + r.row_index + ' → ' + iss); }); });
+    } catch(e) { sm('Erreur connexion vocal', 'err'); return; }
+
+    // 1. Show batch info
+    if (batchHtml) { document.getElementById('batchInfo').innerHTML = batchHtml; document.getElementById('batchInfo').classList.add('show'); }
+
+    // 2. Show invalid rows FIRST
+    if (allInvalid.length > 0) {
+        var list = document.getElementById('invList');
+        list.innerHTML = '';
+        allInvalid.forEach(function(line) {
+            var parts = line.split(' → ');
+            list.innerHTML += '<div class="inv-row"><span class="inv-idx">' + parts[0] + '</span> <span class="inv-iss">→ ' + parts[1] + '</span></div>';
+        });
+        document.getElementById('invSec').classList.add('show');
+    }
+
+    // 3. THEN show predictions for first valid patient
+    curP = 0;
+    showPatient(0);
+    updatePL();
+
+    var msg = 'Tonal: ' + results.tonal.n_predicted + ' OK, ' + results.tonal.n_invalid + ' inv. | Vocal: ' + results.vocal.n_predicted + ' OK, ' + results.vocal.n_invalid + ' inv.';
+    sm(msg, 'ok');
+}
+
+function buildTonalRow() {
+    var row = {};
+    TF.forEach(function(f, i) { row['before_exam_'+f+'_Hz'] = getT()[i]; });
+    return row;
+}
+function buildVocalRow() {
+    var row = {};
+    VI.forEach(function(d, i) { row['wrs_'+d+'_before'] = getV()[i]; });
+    return row;
+}
+
+// === SHOW PATIENT ===
+function showPatient(idx) {
+    if (results.tonal && results.tonal.predictions.length > idx) {
+        var src = (loaded.tonal && loaded.tonal.rows.length > 0) ? loaded.tonal.rows : [buildTonalRow()];
+        var row = src[idx], pred = results.tonal.predictions[idx];
+        if (row && pred) {
+            var b = TF.map(function(f) { return parseFloat(row['before_exam_'+f+'_Hz']) || 0; });
+            var a = TF.map(function(f) { return pred['after_exam_'+f+'_Hz']; });
+            setT(b); plotT(b, a);
+            var g = b.reduce(function(s, v, i) { return s + (v - a[i]); }, 0) / 7;
+            document.getElementById('s1').textContent = '+' + Math.round(g) + ' dB';
+        }
+    }
+    if (results.vocal && results.vocal.predictions.length > idx) {
+        var src = (loaded.vocal && loaded.vocal.rows.length > 0) ? loaded.vocal.rows : [buildVocalRow()];
+        var row = src[idx], pred = results.vocal.predictions[idx];
+        if (row && pred) {
+            var b = VI.map(function(i) { return parseFloat(row['wrs_'+i+'_before']) || 0; });
+            var a = VI.map(function(i) { return pred['wrs_'+i+'_after']; });
+            setV(b); plotV(b, a);
+            var g = a.reduce(function(s, v, i) { return s + (v - b[i]); }, 0) / 7;
+            document.getElementById('s2').textContent = '+' + Math.round(g) + '%';
+        }
+    }
+    // Global
+    var t = parseInt(document.getElementById('s1').textContent) || 0;
+    var v = parseInt(document.getElementById('s2').textContent) || 0;
+    var g = Math.min(100, Math.max(0, Math.round((Math.abs(t)/120*50) + (Math.abs(v)/100*50))));
+    document.getElementById('s3').textContent = g + '/100';
+    document.getElementById('pf').style.width = g + '%';
+}
+
+// === NAVIGATION ===
+function maxP() { return Math.max(results.tonal ? results.tonal.predictions.length : 0, results.vocal ? results.vocal.predictions.length : 0, 1); }
+function prevP() { if (curP > 0) { curP--; showPatient(curP); updatePL(); } }
+function nextP() { if (curP < maxP()-1) { curP++; showPatient(curP); updatePL(); } }
+function updatePL() { document.getElementById('pl').textContent = (curP+1) + '/' + maxP(); }
+
+function hide() {
+    document.getElementById('invSec').classList.remove('show');
+    document.getElementById('batchInfo').classList.remove('show');
+}
+
+function sm(t, c) {
+    var el = document.getElementById('msg');
+    if (!t) { el.className = 'msg'; return; }
+    el.className = 'msg ' + (c || '');
+    el.textContent = t;
+}
+
+async function checkAPI() {
+    try {
+        var r = await fetch(API + '/status');
+        var d = await r.json();
+        document.getElementById('ad').className = 'api-dot on';
+        document.getElementById('at').textContent = d.models.tonal + '/' + d.models.vocal;
+    } catch(e) {
+        document.getElementById('ad').className = 'api-dot';
+        document.getElementById('at').textContent = 'Offline';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() { buildSliders(); initCharts(); checkAPI(); });
+</script>
+</body>
+</html>

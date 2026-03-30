@@ -1,0 +1,30 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+
+# Kedro
+mlruns/
+.viz
+notebooks/
+
+# Données intermédiaires (on garde raw et models)
+data/02_intermediate/
+data/03_primary/
+data/04_feature/
+data/05_model_input/
+data/07_model_output/
+data/08_reporting/
+
+# IDE
+.vscode/
+.idea/
+
+# Environnement
+.env
+*.egg-info
