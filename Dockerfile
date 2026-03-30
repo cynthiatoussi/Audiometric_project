@@ -17,22 +17,29 @@
 
 # Image de base Python
 
+# ==============================
+# Dockerfile - Gain Project
+# ==============================
+
 FROM python:3.11-slim
 
-# Répertoire de travail dans le container
 WORKDIR /app
 
-# Copier les fichiers de dépendances d'abord (cache Docker)
-COPY requirements.txt .
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc g++ && rm -rf /var/lib/apt/lists/*
 
-# Installation des dépendances
+# Dépendances Python
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copier tout le projet
+# Copier le projet
 COPY . .
 
-# Port exposé pour l'API Flask
+# Installer le projet en mode dev (pour que gain_project soit importable)
+RUN pip install -e .
+
+# Port API Flask
 EXPOSE 5001
 
-# Commande par défaut : lancer l'API
+# Lancer l'API
 CMD ["python", "app.py"]

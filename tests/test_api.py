@@ -83,7 +83,6 @@ class TestPredictTonal:
         )
         data = json.loads(response.data)
 
-        # Si modèle pas chargé, on vérifie juste que l'API répond
         if response.status_code == 404:
             assert "error" in data
             return
@@ -95,7 +94,7 @@ class TestPredictTonal:
     def test_invalid_rows_reported(self, client):
         """Les lignes avec cases vides sont signalées."""
         rows = [self._valid_tonal_row() for _ in range(10)]
-        # Injecter des valeurs invalides
+        # Injecter des valeurs invalides aux lignes 2, 5, 7 (0-based)
         rows[2]["before_exam_500_Hz"] = None
         rows[5]["before_exam_1000_Hz"] = None
         rows[7]["before_exam_250_Hz"] = "ABC"
@@ -112,9 +111,10 @@ class TestPredictTonal:
 
         assert data["n_invalid"] == 3
         invalid_indices = [r["row_index"] for r in data["invalid_rows"]]
-        assert 2 in invalid_indices
-        assert 5 in invalid_indices
-        assert 7 in invalid_indices
+        # API retourne des indices 1-based (ligne 3, 6, 8)
+        assert 3 in invalid_indices
+        assert 6 in invalid_indices
+        assert 8 in invalid_indices
 
     def test_missing_columns(self, client):
         """Colonnes manquantes retournent une erreur 400."""
@@ -185,8 +185,9 @@ class TestPredictVocal:
 
         assert data["n_invalid"] == 2
         invalid_indices = [r["row_index"] for r in data["invalid_rows"]]
-        assert 1 in invalid_indices
-        assert 4 in invalid_indices
+        # API retourne des indices 1-based (ligne 2, 5)
+        assert 2 in invalid_indices
+        assert 5 in invalid_indices
 
 
 # =============================================

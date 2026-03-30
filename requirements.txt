@@ -1,21 +1,19 @@
-ipython>=8.10
-jupyterlab>=3.0
-notebook
-kedro~=1.2.0
-
 # ==============================
 # Dépendances - Gain Project
 # ==============================
 
-# Framework pipeline
-kedro>=0.19.0
+# Kedro
+ipython>=8.10
+jupyterlab>=3.0
+notebook
+kedro~=1.2.0
 kedro-datasets[pandas,pickle]
 
 # API
 flask>=3.0.0
 
-# ML
-scikit-learn>=1.4.0
+# ML (pinned to match trained models)
+scikit-learn==1.5.1
 xgboost>=2.0.0
 optuna>=3.5.0
 
@@ -28,3 +26,4 @@ numpy>=1.24.0
 
 # Tests
 pytest>=7.0.0
+pytest-cov>=4.0.0c
