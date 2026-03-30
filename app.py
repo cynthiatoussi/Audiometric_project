@@ -18,6 +18,7 @@ Conformité évaluation :
     - Gestion des erreurs complète
 """
 
+
 import os
 import json
 import pickle
@@ -43,7 +44,6 @@ TONAL_MODEL_PATH = BASE_DIR / "data" / "06_models" / "xgb_model_tonal.pkl"
 VOCAL_MODEL_PATH = BASE_DIR / "data" / "06_models" / "rf_vocal_model.pkl"
 USER_INPUT_DIR = BASE_DIR / "data" / "01_raw" / "user_inputs"
 
-# Créer le dossier pour sauvegarder les données utilisateur
 USER_INPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # -------------------------------------------------
@@ -58,10 +58,7 @@ VOCAL_INTENSITIES = [30, 40, 50, 60, 70, 80, 90]
 VOCAL_BEFORE_COLS = [f"wrs_{i}_before" for i in VOCAL_INTENSITIES]
 VOCAL_AFTER_COLS = [f"wrs_{i}_after" for i in VOCAL_INTENSITIES]
 
-# Borne tonal (synchronisé avec preprocess.py tonal)
 TONAL_MAX_DB = 120
-
-# Bornes vocal (synchronisé avec preprocess.py vocal)
 VOCAL_MIN_WRS = 0
 VOCAL_MAX_WRS = 100
 
@@ -90,18 +87,12 @@ vocal_model = load_model(VOCAL_MODEL_PATH)
 # -------------------------------------------------
 
 def save_user_input(data, data_type):
-    """
-    Sauvegarde les données envoyées par l'utilisateur.
-    Conforme au TP : 'La sauvegarde de toutes les données d'entrées
-    en les identifiant comme données en provenance d'utilisateurs'
-    """
+    """Sauvegarde les données envoyées par l'utilisateur."""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"{data_type}_{timestamp}.json"
     filepath = USER_INPUT_DIR / filename
-
     with open(filepath, "w") as f:
         json.dump(data, f, indent=2)
-
     log.info("Données utilisateur sauvegardées : %s", filepath)
     return str(filepath)
 
@@ -114,7 +105,6 @@ def detect_data_type(columns):
     """Détecte si les données sont tonales ou vocales."""
     tonal_match = set(TONAL_BEFORE_COLS).issubset(set(columns))
     vocal_match = set(VOCAL_BEFORE_COLS).issubset(set(columns))
-
     if tonal_match:
         return "tonal"
     elif vocal_match:
@@ -128,38 +118,27 @@ def detect_data_type(columns):
 # -------------------------------------------------
 
 def validate_and_predict_tonal(df):
-    """
-    Valide les données tonales et retourne prédictions + lignes invalides.
-    Messages d'erreur détaillés pour chaque cellule problématique.
-    """
+    """Valide les données tonales et retourne prédictions + lignes invalides."""
     df_raw = df[TONAL_BEFORE_COLS].copy()
     df_numeric = df_raw.apply(pd.to_numeric, errors="coerce")
 
-    # Détection des lignes invalides avec raison précise
     invalid_rows = []
     for idx in range(len(df_numeric)):
         row_num = df_numeric.iloc[idx]
         row_raw = df_raw.iloc[idx]
         issues = []
-
         for col in TONAL_BEFORE_COLS:
             raw_val = row_raw[col]
             num_val = row_num[col]
-
             if raw_val is None or (isinstance(raw_val, float) and pd.isna(raw_val)):
                 issues.append(f"{col}: cellule vide")
             elif pd.isna(num_val):
                 issues.append(f"{col}: valeur non numérique ('{raw_val}')")
             elif num_val > TONAL_MAX_DB:
                 issues.append(f"{col}: valeur {num_val} dépasse le seuil de {TONAL_MAX_DB} dB")
-
         if issues:
-            invalid_rows.append({
-                "row_index": idx + 1,
-                "issues": issues,
-            })
+            invalid_rows.append({"row_index": idx + 1, "issues": issues})
 
-    # Séparer valides et invalides
     invalid_indices = [r["row_index"] - 1 for r in invalid_rows]
     valid_mask = ~df_numeric.index.isin(invalid_indices)
     df_valid = df_numeric[valid_mask]
@@ -174,24 +153,18 @@ def validate_and_predict_tonal(df):
 
 
 def validate_and_predict_vocal(df):
-    """
-    Valide les données vocales et retourne prédictions + lignes invalides.
-    Messages d'erreur détaillés pour chaque cellule problématique.
-    """
+    """Valide les données vocales et retourne prédictions + lignes invalides."""
     df_raw = df[VOCAL_BEFORE_COLS].copy()
     df_numeric = df_raw.apply(pd.to_numeric, errors="coerce")
 
-    # Détection des lignes invalides avec raison précise
     invalid_rows = []
     for idx in range(len(df_numeric)):
         row_num = df_numeric.iloc[idx]
         row_raw = df_raw.iloc[idx]
         issues = []
-
         for col in VOCAL_BEFORE_COLS:
             raw_val = row_raw[col]
             num_val = row_num[col]
-
             if raw_val is None or (isinstance(raw_val, float) and pd.isna(raw_val)):
                 issues.append(f"{col}: cellule vide")
             elif pd.isna(num_val):
@@ -200,12 +173,8 @@ def validate_and_predict_vocal(df):
                 issues.append(f"{col}: valeur {num_val}% inférieure au minimum {VOCAL_MIN_WRS}%")
             elif num_val > VOCAL_MAX_WRS:
                 issues.append(f"{col}: valeur {num_val}% dépasse le maximum {VOCAL_MAX_WRS}%")
-
         if issues:
-            invalid_rows.append({
-                "row_index": idx + 1,
-                "issues": issues,
-            })
+            invalid_rows.append({"row_index": idx + 1, "issues": issues})
 
     invalid_indices = [r["row_index"] - 1 for r in invalid_rows]
     valid_mask = ~df_numeric.index.isin(invalid_indices)
@@ -254,27 +223,21 @@ def status():
 
 @app.route("/train", methods=["POST"])
 def train_all():
-    """
-    Exécute tous les pipelines d'entraînement.
-    Conforme évaluation : '/train pour exécuter les différents pipelines retenus'
-    """
+    """Exécute tous les pipelines d'entraînement."""
     global tonal_model, vocal_model
     results = {}
-
     try:
         os.system("kedro run --pipeline=tonal_full")
         tonal_model = load_model(TONAL_MODEL_PATH)
         results["tonal"] = "entraîné et rechargé"
     except Exception as e:
         results["tonal"] = f"erreur: {str(e)}"
-
     try:
         os.system("kedro run --pipeline=vocal_full")
         vocal_model = load_model(VOCAL_MODEL_PATH)
         results["vocal"] = "entraîné et rechargé"
     except Exception as e:
         results["vocal"] = f"erreur: {str(e)}"
-
     return jsonify({"status": "Entraînement terminé", "details": results})
 
 
@@ -306,10 +269,7 @@ def train_vocal():
 
 @app.route("/predict", methods=["POST"])
 def predict_auto():
-    """
-    Prédiction avec auto-détection du type de données.
-    Conforme évaluation : retourne les lignes invalides avec leur emplacement.
-    """
+    """Prédiction avec auto-détection du type de données."""
     try:
         data = request.get_json()
         if not data:
@@ -318,12 +278,9 @@ def predict_auto():
     except Exception as e:
         return jsonify({"error": f"Format JSON invalide : {str(e)}"}), 400
 
-    # Sauvegarde des données utilisateur
     save_user_input(data, "predict")
 
-    # Auto-détection
     data_type = detect_data_type(df.columns.tolist())
-
     if data_type == "tonal":
         return _predict_tonal_internal(df, data)
     elif data_type == "vocal":
@@ -341,10 +298,11 @@ def predict_tonal():
     """Prédiction tonal explicite."""
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({"error": "Corps de requête vide"}), 400
         df = pd.DataFrame(data)
     except Exception as e:
         return jsonify({"error": f"Format JSON invalide : {str(e)}"}), 400
-
     save_user_input(data, "predict_tonal")
     return _predict_tonal_internal(df, data)
 
@@ -354,10 +312,11 @@ def predict_vocal():
     """Prédiction vocal explicite."""
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({"error": "Corps de requête vide"}), 400
         df = pd.DataFrame(data)
     except Exception as e:
         return jsonify({"error": f"Format JSON invalide : {str(e)}"}), 400
-
     save_user_input(data, "predict_vocal")
     return _predict_vocal_internal(df, data)
 
@@ -366,14 +325,16 @@ def _predict_tonal_internal(df, raw_data):
     """Logique commune de prédiction tonale."""
     global tonal_model
 
+    # 1. Vérifier les colonnes D'ABORD
+    missing = set(TONAL_BEFORE_COLS) - set(df.columns)
+    if missing:
+        return jsonify({"error": f"Colonnes manquantes : {list(missing)}"}), 400
+
+    # 2. Vérifier le modèle ENSUITE
     if tonal_model is None:
         tonal_model = load_model(TONAL_MODEL_PATH)
         if tonal_model is None:
             return jsonify({"error": "Modèle tonal non entraîné. Utilisez POST /train"}), 404
-
-    missing = set(TONAL_BEFORE_COLS) - set(df.columns)
-    if missing:
-        return jsonify({"error": f"Colonnes manquantes : {list(missing)}"}), 400
 
     predictions, invalid_rows = validate_and_predict_tonal(df)
 
@@ -391,14 +352,16 @@ def _predict_vocal_internal(df, raw_data):
     """Logique commune de prédiction vocale."""
     global vocal_model
 
+    # 1. Vérifier les colonnes D'ABORD
+    missing = set(VOCAL_BEFORE_COLS) - set(df.columns)
+    if missing:
+        return jsonify({"error": f"Colonnes manquantes : {list(missing)}"}), 400
+
+    # 2. Vérifier le modèle ENSUITE
     if vocal_model is None:
         vocal_model = load_model(VOCAL_MODEL_PATH)
         if vocal_model is None:
             return jsonify({"error": "Modèle vocal non entraîné. Utilisez POST /train"}), 404
-
-    missing = set(VOCAL_BEFORE_COLS) - set(df.columns)
-    if missing:
-        return jsonify({"error": f"Colonnes manquantes : {list(missing)}"}), 400
 
     predictions, invalid_rows = validate_and_predict_vocal(df)
 
@@ -420,11 +383,9 @@ def _predict_vocal_internal(df, raw_data):
 def not_found(e):
     return jsonify({"error": "Route non trouvée"}), 404
 
-
 @app.errorhandler(500)
 def server_error(e):
     return jsonify({"error": "Erreur serveur interne"}), 500
-
 
 @app.errorhandler(405)
 def method_not_allowed(e):
