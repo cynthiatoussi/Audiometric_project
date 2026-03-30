@@ -85,7 +85,7 @@ def remove_invalid_rows(df: pd.DataFrame) -> pd.DataFrame:
         | (df > MAX_DB)
     ).any(axis=1)
 
-    cleaned_df = df[~invalid_mask].reset_index(drop=True)
+    cleaned_df = df[~invalid_mask]
 
     n_removed = n_before - len(cleaned_df)
     log.info(
